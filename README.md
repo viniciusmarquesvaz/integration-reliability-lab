@@ -4,6 +4,8 @@ A small, production-minded reference implementation for reliable webhooks: HMAC 
 
 The scenario is entirely synthetic. It does not connect to a payment gateway, move money, or use personal data.
 
+![Integration reliability workflow](docs/assets/integration-reliability-overview.png)
+
 ## Why this project exists
 
 Webhook failures are rarely just HTTP problems. Providers retry deliveries, events arrive more than once, transient dependencies fail, and operators need to know exactly what happened without exposing the original payload in logs or status APIs.
