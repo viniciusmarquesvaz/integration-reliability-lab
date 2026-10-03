@@ -1,0 +1,125 @@
+openapi: 3.1.0
+info:
+  title: Integration Reliability Lab API
+  version: 0.1.0
+  description: Synthetic webhook ingestion, idempotency, retry, and reconciliation demo.
+servers:
+  - url: http://localhost:3000
+paths:
+  /health:
+    get:
+      summary: Check API liveness
+      responses:
+        "200":
+          description: API is running
+  /webhooks/provider:
+    post:
+      summary: Receive a signed synthetic payment event
+      parameters:
+        - in: header
+          name: x-webhook-signature
+          required: true
+          schema:
+            type: string
+            pattern: ^sha256=[a-f0-9]{64}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookPayload"
+      responses:
+        "202":
+          description: Event accepted for asynchronous processing
+        "200":
+          description: Duplicate event acknowledged without a second effect
+        "401":
+          description: Signature is missing or invalid
+        "422":
+          description: Payload validation failed
+  /events/{providerEventId}:
+    get:
+      summary: Get safe event state and processing history
+      parameters:
+        - in: path
+          name: providerEventId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event state without the stored payload
+        "404":
+          description: Event not found
+  /internal/process-pending:
+    post:
+      summary: Run one worker cycle manually
+      parameters:
+        - $ref: "#/components/parameters/AdminToken"
+      responses:
+        "200":
+          description: Worker cycle result
+        "401":
+          description: Invalid admin token
+  /internal/events/{providerEventId}/retry:
+    post:
+      summary: Requeue a failed event for simulated reconciliation
+      parameters:
+        - $ref: "#/components/parameters/AdminToken"
+        - in: path
+          name: providerEventId
+          required: true
+          schema:
+            type: string
+      responses:
+        "202":
+          description: Event requeued
+        "401":
+          description: Invalid admin token
+        "409":
+          description: Event is not in the failed state
+components:
+  parameters:
+    AdminToken:
+      in: header
+      name: x-admin-token
+      required: true
+      schema:
+        type: string
+  schemas:
+    WebhookPayload:
+      type: object
+      additionalProperties: false
+      required: [eventId, type, occurredAt, data]
+      properties:
+        eventId:
+          type: string
+          examples: [evt_demo_success_001]
+        type:
+          type: string
+          const: payment.completed
+        occurredAt:
+          type: string
+          format: date-time
+        data:
+          type: object
+          additionalProperties: false
+          required: [orderId, amountCents, simulation]
+          properties:
+            orderId:
+              type: string
+            amountCents:
+              type: integer
+              minimum: 1
+            simulation:
+              type: object
+              additionalProperties: false
+              required: [mode, failuresBeforeSuccess]
+              properties:
+                mode:
+                  type: string
+                  enum: [success, transient_failure, permanent_failure]
+                failuresBeforeSuccess:
+                  type: integer
+                  minimum: 0
+                  maximum: 10

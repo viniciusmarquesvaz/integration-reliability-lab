@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: reliability_lab_test
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d reliability_lab_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      ADMIN_TOKEN: test-admin-token-123456789
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/reliability_lab_test?schema=public
+      LOG_LEVEL: silent
+      MAX_PROCESSING_ATTEMPTS: 3
+      RETRY_BASE_DELAY_MS: 0
+      WEBHOOK_SECRET: test-webhook-secret-123456
+      WORKER_INTERVAL_MS: 1000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run prisma:generate
+      - run: npm run db:deploy
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build

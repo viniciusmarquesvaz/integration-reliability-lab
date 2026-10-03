@@ -1,0 +1,13 @@
+{
+  "eventId": "evt_demo_success_001",
+  "type": "payment.completed",
+  "occurredAt": "2026-10-03T12:00:00.000Z",
+  "data": {
+    "orderId": "order_demo_001",
+    "amountCents": 12500,
+    "simulation": {
+      "mode": "success",
+      "failuresBeforeSuccess": 0
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "eventId": "evt_demo_retry_001",
+  "type": "payment.completed",
+  "occurredAt": "2026-10-03T12:00:00.000Z",
+  "data": {
+    "orderId": "order_demo_002",
+    "amountCents": 25900,
+    "simulation": {
+      "mode": "transient_failure",
+      "failuresBeforeSuccess": 1
+    }
+  }
+}

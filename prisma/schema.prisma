@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WebhookStatus {
+  PENDING
+  PROCESSING
+  RETRY_PENDING
+  PROCESSED
+  FAILED
+}
+
+enum AttemptStatus {
+  SUCCESS
+  RETRYABLE_FAILURE
+  PERMANENT_FAILURE
+}
+
+model WebhookEvent {
+  id              String         @id @default(uuid())
+  providerEventId String         @unique @map("provider_event_id")
+  type            String
+  payload         Json
+  payloadHash     String         @map("payload_hash")
+  status          WebhookStatus  @default(PENDING)
+  attemptCount    Int            @default(0) @map("attempt_count")
+  nextAttemptAt   DateTime?      @map("next_attempt_at")
+  lastErrorCode   String?        @map("last_error_code")
+  processedAt     DateTime?      @map("processed_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  attempts        ProcessingAttempt[]
+
+  @@index([status, nextAttemptAt])
+  @@map("webhook_events")
+}
+
+model ProcessingAttempt {
+  id            String        @id @default(uuid())
+  eventId       String        @map("event_id")
+  attemptNumber Int           @map("attempt_number")
+  status        AttemptStatus
+  errorCode     String?       @map("error_code")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  event         WebhookEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, attemptNumber])
+  @@index([eventId, createdAt])
+  @@map("processing_attempts")
+}
